@@ -135,25 +135,15 @@ std::tuple<bool, std::string> lua_interpreter::run_chunk(const char *code) noexc
     return pimpl->run_chunk(code);
 }
 
-template<>
-get_var_t<types::INT> lua_interpreter::get_global<types::INT>(const char *varname) {
-    return pimpl->get_what<whahaha::GLOBAL, types::INT>(varname);
+template<types Type>
+get_var_t<Type> lua_interpreter::get_global(const char *varname) {
+    return pimpl->get_what<whahaha::GLOBAL, Type>(varname);
 }
-
-template<>
-get_var_t<types::NUM> lua_interpreter::get_global<types::NUM>(const char *varname) {
-    return pimpl->get_what<whahaha::GLOBAL, types::NUM>(varname);
-}
-
-template<>
-get_var_t<types::STR> lua_interpreter::get_global<types::STR>(const char *varname) {
-    return pimpl->get_what<whahaha::GLOBAL, types::STR>(varname);
-}
-
-template<>
-get_var_t<types::BOOL> lua_interpreter::get_global<types::BOOL>(const char *varname) {
-    return pimpl->get_what<whahaha::GLOBAL, types::BOOL>(varname);
-}
+// EXPLICIT INSTANTIATION for basic types
+template get_var_t<types::INT> lua_interpreter::get_global<types::INT>(const char *);
+template get_var_t<types::NUM> lua_interpreter::get_global<types::NUM>(const char *);
+template get_var_t<types::STR> lua_interpreter::get_global<types::STR>(const char *);
+template get_var_t<types::BOOL> lua_interpreter::get_global<types::BOOL>(const char *);
 
 template<>
 table_handle lua_interpreter::get_global<types::TABLE>(const char *varname) {
@@ -172,25 +162,16 @@ table_handle::~table_handle() {
         wpimpl->pop_top_table();
 }
 
-template<>
-get_var_t<types::INT> table_handle::get_field<types::INT>(const char *varname) {
-    return wpimpl->get_what<whahaha::TABLE, types::INT>(varname);
+template<types Type>
+get_var_t<Type> table_handle::get_field(const char *varname) {
+    return wpimpl->get_what<whahaha::TABLE, Type>(varname);
 }
 
-template<>
-get_var_t<types::NUM> table_handle::get_field<types::NUM>(const char *varname) {
-    return wpimpl->get_what<whahaha::TABLE, types::NUM>(varname);
-}
-
-template<>
-get_var_t<types::STR> table_handle::get_field<types::STR>(const char *varname) {
-    return wpimpl->get_what<whahaha::TABLE, types::STR>(varname);
-}
-
-template<>
-get_var_t<types::BOOL> table_handle::get_field<types::BOOL>(const char *varname) {
-    return wpimpl->get_what<whahaha::TABLE, types::BOOL>(varname);
-}
+// EXPLICIT INSTANTIATION for basic types
+template get_var_t<types::INT> table_handle::get_field<types::INT>(const char *);
+template get_var_t<types::NUM> table_handle::get_field<types::NUM>(const char *);
+template get_var_t<types::STR> table_handle::get_field<types::STR>(const char *);
+template get_var_t<types::BOOL> table_handle::get_field<types::BOOL>(const char *);
 
 template<>
 table_handle table_handle::get_field<types::TABLE>(const char *varname) {
