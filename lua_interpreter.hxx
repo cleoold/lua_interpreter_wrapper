@@ -6,7 +6,7 @@
 namespace luai {
 
 enum class types {
-    INT, NUM, STR, TABLE
+    INT, NUM, STR, BOOL, TABLE
 };
 
 class table_handle;
@@ -16,8 +16,9 @@ using get_var_t =
     std::conditional_t<Type == types::INT, long,
     std::conditional_t<Type == types::NUM, double,
     std::conditional_t<Type == types::STR, std::string,
+    std::conditional_t<Type == types::BOOL, bool,
                     /*types::TABLE*/ table_handle
->>>;
+>>>>;
 
 class lua_interpreter {
 public:
@@ -65,7 +66,7 @@ public:
 
     // COPYING DELETED
 
-    // must be called immediately after using it
+    // must be called immediately after using table_handle
     ~table_handle();
 
 private:

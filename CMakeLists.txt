@@ -5,7 +5,7 @@ project(lua-interpreter-demo)
 
 # libraries
 
-find_package(Lua 5.3)
+find_package(Lua 5.3 REQUIRED)
 include_directories(${LUA_INCLUDE_DIR})
 message("lua Found: ${LUA_VERSION_STRING} inc: ${LUA_INCLUDE_DIR} lib: ${LUA_LIBRARIES}")
 
@@ -26,5 +26,9 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 
 add_library(lua_interpreter STATIC lua_interpreter.cxx)
 target_link_libraries(lua_interpreter ${LUA_LIBRARIES})
+
 add_executable(demo demo.cxx)
 target_link_libraries(demo lua_interpreter)
+
+add_executable(demo_repl demo_repl.cxx)
+target_link_libraries(demo_repl lua_interpreter)
