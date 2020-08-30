@@ -26,6 +26,7 @@ int main() {
         "y = x + 16.6\n"
         "s = (function() return 'hahaha' end)()\n"
         "t = { ['wow'] = 7, ['nest'] = { ['ehh'] = 8, ['more'] = { ['oh'] = 9 } } }\n"
+        "a = { 'axx', 'byy', 'czz' }\n"
         "print(x + y)\n"
         "print(x + s)\n"
     );
@@ -49,4 +50,11 @@ int main() {
     }
     // convenient
     std::cout << "t.nest.more.oh = " << get_field_recur<types::INT>(state, {"t", "nest", "more", "oh"}) << std::endl;
+
+    {
+        auto arr = state.get_global<types::TABLE>("a");
+        auto len = arr.len();
+        for (auto i = 1LL; i <= len; ++i)
+            std::cout << "a[" << i << "] = " << arr.get_index<types::STR>(i) << std::endl;
+    }
 }

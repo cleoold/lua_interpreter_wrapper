@@ -42,13 +42,16 @@ One can grab global variables of type integer, number, string, bool and table. F
 auto x = state.get_global<types::INT>("x"); // 55
 ```
 
+`std::runtime_error` will be thrown if `x` does not exist (is `nil`) or is other types.
+
 For tables, use a block scope to contain it so the proxy object resets the Lua stack as appropriate when it is destroyed:
 
 ```cpp
 state.run_chunk("config = {\n"
                 "   active = true,\n"
                 "   volume = 77.7,\n"
-                "   profile = 'normal'"
+                "   profile = 'normal',\n"
+                "   menu = {'roar', 'only my railgun', 'level5 - judglight', 'late in autumn'}\n"
                 "}\n"
 );
 {
@@ -56,10 +59,18 @@ state.run_chunk("config = {\n"
     auto active = tbl.get_field<types::BOOL>("active"); // true
     auto volume = tbl.get_field<types::NUM>("volume"); // 77.7
     auto profile = tbl.get_field<types::STR>("profile"); // "normal"
+
+    // open new scope for nested tables
+    // this is also an array, so one can use get_index()
+    {
+        auto menu = tbl.get_field<types::TABLE>("menu");
+        auto myvec = std::vector<std::string>();
+        auto menu_len = menu.len();
+        for (auto i = 1LL; i <= menu_len; ++i)
+            myvec.emplace_back(menu.get_index<types::STR>(i));
+    }
 }
 ```
-
-`std::runtime_error` will be thrown if `x` does not exist (is `nil`) or is other types.
 
 ## End note
 

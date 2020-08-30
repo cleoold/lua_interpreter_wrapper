@@ -13,7 +13,7 @@ class table_handle;
 
 template<types Type>
 using get_var_t =
-    std::conditional_t<Type == types::INT, long,
+    std::conditional_t<Type == types::INT, long long,
     std::conditional_t<Type == types::NUM, double,
     std::conditional_t<Type == types::STR, std::string,
     std::conditional_t<Type == types::BOOL, bool,
@@ -59,6 +59,14 @@ public:
     // get a field from the current table
     template<types Type>
     get_var_t<Type> get_field(const char *varname);
+
+    // get a field using int index from the current array
+    template<types Type>
+    get_var_t<Type> get_index(long long idx);
+
+    // get the length of current array. DOES NOT make sense if array contains holes
+    // or if __len() metamethod does not return int
+    long long len();
 
     // MOVE
     table_handle(table_handle &&) noexcept = default;
