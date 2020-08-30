@@ -60,15 +60,15 @@ struct lua_interpreter::impl {
 
     // pop 0, push 1
     template<whahaha VarWhere>
-    void get_by_name(whahaha_key_t<VarWhere> varname) noexcept;
+    void get_by_key(whahaha_key_t<VarWhere> key) noexcept;
 
     // pop 0, push 0
     template<whahaha VarWhere, class R, class Cvrt, class Check, class KeyT = whahaha_key_t<VarWhere>>
-    R get_what_impl(KeyT varname, Cvrt &&cvrtfunc, Check &&checkfunc, const char *throwmsg) {
-        get_by_name<VarWhere>(varname);
+    R get_what_impl(KeyT key, Cvrt &&cvrtfunc, Check &&checkfunc, const char *throwmsg) {
+        get_by_key<VarWhere>(key);
         if (!checkfunc(L, -1)) {
             lua_pop(L, 1);
-            throw std::runtime_error{std::string{"variable/field ["} + varname + "] is not " + throwmsg};
+            throw std::runtime_error{std::string{"variable/field ["} + key + "] is not " + throwmsg};
         }
         auto result = cvrtfunc(L, -1, NULL);
         lua_pop(L, 1);
@@ -78,45 +78,45 @@ struct lua_interpreter::impl {
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
     template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
-    std::enable_if_t<Type == types::INT, R> get_what(KeyT varname) {
-        return get_what_impl<VarWhere, R>(varname, lua_tointegerx, lua_isinteger,
+    std::enable_if_t<Type == types::INT, R> get_what(KeyT key) {
+        return get_what_impl<VarWhere, R>(key, lua_tointegerx, lua_isinteger,
             "integer");
     }
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
     template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
-    std::enable_if_t<Type == types::NUM, R> get_what(KeyT varname) {
-        return get_what_impl<VarWhere, R>(varname, lua_tonumberx, lua_isnumber,
+    std::enable_if_t<Type == types::NUM, R> get_what(KeyT key) {
+        return get_what_impl<VarWhere, R>(key, lua_tonumberx, lua_isnumber,
             "number or string convertible to number");
     }
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
     template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
-    std::enable_if_t<Type == types::STR, R> get_what(KeyT varname) {
-        return get_what_impl<VarWhere, R>(varname, lua_tolstring, lua_isstring,
+    std::enable_if_t<Type == types::STR, R> get_what(KeyT key) {
+        return get_what_impl<VarWhere, R>(key, lua_tolstring, lua_isstring,
             "string or number");
     }
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
     template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
-    std::enable_if_t<Type == types::BOOL, R> get_what(KeyT varname) {
+    std::enable_if_t<Type == types::BOOL, R> get_what(KeyT key) {
         static auto toboolean = [](auto ls, auto idx, auto) { return (R)lua_toboolean(ls, idx); };
         // because lua_isboolean is macro
         static auto isboolean = [](auto ls, auto idx) { return lua_isboolean(ls, idx); };
-        return get_what_impl<VarWhere, R>(varname, toboolean, isboolean,
+        return get_what_impl<VarWhere, R>(key, toboolean, isboolean,
             "boolean");
     }
 
     // pop 0, push 1
     template<whahaha VarWhere, class KeyT = whahaha_key_t<VarWhere>>
-    void push_table(KeyT varname) {
-        get_by_name<VarWhere>(varname);
+    void push_table(KeyT key) {
+        get_by_key<VarWhere>(key);
         if (!lua_istable(L, -1)) {
             lua_pop(L, 1);
-            throw std::runtime_error{std::string{"variable "} + varname + " is not table"};
+            throw std::runtime_error{std::string{"variable "} + key + " is not table"};
         }
     }
 
@@ -139,26 +139,26 @@ struct lua_interpreter::impl {
 };
 
 template<>
-void lua_interpreter::impl::get_by_name<whahaha::GLOBAL>(whahaha_key_t<whahaha::GLOBAL> varname) noexcept {
-    lua_getglobal(L, varname);
+void lua_interpreter::impl::get_by_key<whahaha::GLOBAL>(whahaha_key_t<whahaha::GLOBAL> keyname) noexcept {
+    lua_getglobal(L, keyname);
 }
 
 // assumes table is already on the top of the stack
 template<>
-void lua_interpreter::impl::get_by_name<whahaha::TABLE>(whahaha_key_t<whahaha::GLOBAL> varname) noexcept {
-    lua_getfield(L, -1, varname);
+void lua_interpreter::impl::get_by_key<whahaha::TABLE>(whahaha_key_t<whahaha::GLOBAL> keyname) noexcept {
+    lua_getfield(L, -1, keyname);
 }
 
 // assumes table is already on the top of the stack
 template<>
-void lua_interpreter::impl::get_by_name<whahaha::TABLE_INDEX>(whahaha_key_t<whahaha::TABLE_INDEX> varidx) noexcept {
-    lua_geti(L, -1, varidx);
+void lua_interpreter::impl::get_by_key<whahaha::TABLE_INDEX>(whahaha_key_t<whahaha::TABLE_INDEX> keyidx) noexcept {
+    lua_geti(L, -1, keyidx);
 }
 
 // key is a function
 // calls function
 template<>
-void lua_interpreter::impl::get_by_name<whahaha::FUNC1>(whahaha_key_t<whahaha::FUNC1> f) noexcept {
+void lua_interpreter::impl::get_by_key<whahaha::FUNC1>(whahaha_key_t<whahaha::FUNC1> f) noexcept {
     f(L, -1);
 }
 
