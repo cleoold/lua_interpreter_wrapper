@@ -27,8 +27,10 @@ set(CMAKE_VERBOSE_MAKEFILE ON)
 add_library(lua_interpreter STATIC lua_interpreter.cxx)
 target_link_libraries(lua_interpreter ${LUA_LIBRARIES})
 
-add_executable(demo demo.cxx)
-target_link_libraries(demo lua_interpreter)
-
 add_executable(demo_repl demo_repl.cxx)
 target_link_libraries(demo_repl lua_interpreter)
+
+enable_testing()
+add_executable(demo_test demo_test.cxx)
+target_link_libraries(demo_test lua_interpreter)
+add_test(demo_test ${CMAKE_BINARY_DIR}/build/bin/demo_test)

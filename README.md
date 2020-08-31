@@ -9,9 +9,10 @@ Demo project that wraps a little basic Lua API in a C++ manner - object-oriented
 ```sh
 cmake CMakeLists.txt
 make
+make test
 ```
 
-It will generate a library archive under `build/lib` folder. It also generates two demo executables: `demo_repl`, a Lua REPL basically the same as the built-in one, and `demo`, an executable that shows the result of running `demo.cxx`.
+It will generate a library archive under `build/lib` folder. It also generates two demo executables: `demo_repl`, a Lua REPL basically the same as the built-in one, and `demo_test`, an executable that shows the result of running `demo_test.cxx`.
 
 ## Example
 

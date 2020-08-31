@@ -40,3 +40,5 @@ CMakeFiles
 CMakeCache.txt
 cmake_install.cmake
 Makefile
+CTestTestfile.cmake
+Testing
