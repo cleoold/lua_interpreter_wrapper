@@ -56,7 +56,8 @@ state.run_chunk("config = {\n"
                 "}\n"
 );
 {
-    auto tbl = state.get_global<types::TABLE>("config");
+    // one and one table handle should be defined per scope
+    auto tbl = state.get_global<types::TABLE>("config"); // handle
     auto active = tbl.get_field<types::BOOL>("active"); // true
     auto volume = tbl.get_field<types::NUM>("volume"); // 77.7
     auto profile = tbl.get_field<types::STR>("profile"); // "normal"

@@ -61,7 +61,7 @@ struct lua_interpreter::impl {
 
     // pop 0, push 1
     template<whahaha VarWhere>
-    void get_by_key(whahaha_key_t<VarWhere> key, int tidx) noexcept;
+    void get_by_key(whahaha_key_t<VarWhere> key, int tidx);
 
     // grab value found by "key" based on the table at index "tidx"
     // if VarWhere is GLOBAL then tidx should be ignored
@@ -123,9 +123,14 @@ struct lua_interpreter::impl {
         }
     }
 
-    // pop 1, push 0
-    void pop_top_table() noexcept {
-        lua_pop(L, 1);
+    // pop 0, push 0
+    int get_top_idx() noexcept {
+        return lua_gettop(L);
+    }
+
+    // rotate, 1 removed overall
+    void remove_table(int idx) noexcept {
+        lua_remove(L, idx);
     }
 
     // assumes table is already in the stack at index tidx
@@ -133,6 +138,11 @@ struct lua_interpreter::impl {
     auto table_len(int tidx) {
         return get_what_impl<whahaha::FUNC1, LuaInt>(lua_len, tidx, lua_tointegerx, lua_isinteger,
             "integer");
+    }
+
+    void protect_indexing(int idx) {
+        if (!(get_top_idx() >= idx))
+            throw std::runtime_error{"Malformed Lua stack indexing"};
     }
 
     ~impl() {
@@ -143,26 +153,29 @@ struct lua_interpreter::impl {
 
 // int param is ignored
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::GLOBAL>(whahaha_key_t<whahaha::GLOBAL> keyname, int) noexcept {
+void lua_interpreter::impl::get_by_key<whahaha::GLOBAL>(whahaha_key_t<whahaha::GLOBAL> keyname, int) {
     lua_getglobal(L, keyname);
 }
 
 // assumes table is already on the stack at index tidx
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::TABLE>(whahaha_key_t<whahaha::GLOBAL> keyname, int tidx) noexcept {
+void lua_interpreter::impl::get_by_key<whahaha::TABLE>(whahaha_key_t<whahaha::GLOBAL> keyname, int tidx) {
+    protect_indexing(tidx);
     lua_getfield(L, tidx, keyname);
 }
 
 // assumes table is already on the stack at index tidx
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::TABLE_INDEX>(whahaha_key_t<whahaha::TABLE_INDEX> keyidx, int tidx) noexcept {
+void lua_interpreter::impl::get_by_key<whahaha::TABLE_INDEX>(whahaha_key_t<whahaha::TABLE_INDEX> keyidx, int tidx) {
+    protect_indexing(tidx);
     lua_geti(L, tidx, keyidx);
 }
 
 // key is a function
 // calls function
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::FUNC1>(whahaha_key_t<whahaha::FUNC1> f, int tidx) noexcept {
+void lua_interpreter::impl::get_by_key<whahaha::FUNC1>(whahaha_key_t<whahaha::FUNC1> f, int tidx) {
+    protect_indexing(tidx);
     f(L, tidx);
 }
 
@@ -201,39 +214,26 @@ table_handle lua_interpreter::get_global<types::TABLE>(whahaha_key_t<whahaha::GL
 
 struct table_handle::impl {
     std::shared_ptr<lua_interpreter::impl> pstate;
+    // own a reference to the parent impl to avoid popping stack even if parent itself is freed
     std::shared_ptr<impl> parent;
-    // where is the current table on the stack: -1 means top
-    int stack_index {-1};
+    // where is the current table on the stack
+    int stack_index;
 
+    // creation assumes table is already on the top of the stack
     // currently the creation of table handle is managed by get_global, get_field, get_index functions,
     // which takes care of pushing
     // the destruction of table handle is managed by the destructor of this class
     // beware
     impl(std::shared_ptr<lua_interpreter::impl> &&interp_impl, std::shared_ptr<impl> &&parent_impl)
         : pstate{std::move(interp_impl)}, parent{std::move(parent_impl)}
+        , stack_index{pstate->get_top_idx()}
     {}
 
-    // when new table handle is spawned from current table,
-    // the current table is below the new one
-    void decrease_stack_indicator() noexcept {
-        --stack_index;
-        if (parent)
-            parent->decrease_stack_indicator();
-    }
-
-    // when the child table handle is destroyed, it is also removed from
-    // the top of the stack. this table's index increases
-    void increase_stack_indicator() noexcept {
-        ++stack_index;
-        if (parent)
-            parent->increase_stack_indicator();
-    }
-
     ~impl() {
-        if (pstate)
-            pstate->pop_top_table();
-        if (parent)
-            parent->increase_stack_indicator();
+        // technically 2nd condition is false only if user uses function incorrectly we
+        // have to crash program
+        if (pstate && pstate->get_top_idx() >= stack_index)
+            pstate->remove_table(stack_index);
     }
 };
 
@@ -259,7 +259,6 @@ template get_var_t<types::BOOL> table_handle::get_field<types::BOOL>(whahaha_key
 template<>
 table_handle table_handle::get_field<types::TABLE>(whahaha_key_t<whahaha::TABLE> varname) {
     pimpl->pstate->push_table<whahaha::TABLE>(varname, pimpl->stack_index);
-    pimpl->decrease_stack_indicator();
     return {pimpl->pstate, pimpl};
 }
 
@@ -277,7 +276,6 @@ template get_var_t<types::BOOL> table_handle::get_index<types::BOOL>(whahaha_key
 template<>
 table_handle table_handle::get_index<types::TABLE>(whahaha_key_t<whahaha::TABLE_INDEX> idx) {
     pimpl->pstate->push_table<whahaha::TABLE_INDEX>(idx, pimpl->stack_index);
-    pimpl->decrease_stack_indicator();
     return {pimpl->pstate, pimpl};
 }
 

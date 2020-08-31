@@ -94,6 +94,7 @@ int main() {
     );
     {
         // test table handle RAII for manipulating stack indices
+        // one and one table handle should be defined per scope
         auto k = state.get_global<types::TABLE>("k");
         ASSERT(k.get_field<types::INT>("haha") == 8);
         {
