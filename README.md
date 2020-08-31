@@ -43,7 +43,7 @@ One can grab global variables of type integer, number, string, bool and table. F
 auto x = state.get_global<types::INT>("x"); // 55
 ```
 
-`std::runtime_error` will be thrown if `x` does not exist (is `nil`) or is other types.
+`luastate_error` will be thrown if `x` does not exist (is `nil`) or is other types.
 
 For tables, getting a `types::TABLE` returns a `table_handle`. When this object is constructed, the corresponding table is pushed to the Lua stack so we can use `get_field` to obtain its fields. When this object is destructed, it removes that table from the lua Stack. Use a block scope to contain the returned object so it resets the Lua stack as appropriate when it is destroyed:
 

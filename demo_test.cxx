@@ -17,7 +17,7 @@ do {                                                                \
     bool thrown {false};                                            \
     try {                                                           \
         expr;                                                       \
-    } catch (std::runtime_error &) {                                \
+    } catch (luai::luastate_error &) {                              \
         thrown = true;                                              \
     }                                                               \
     ASSERT(thrown);                                                 \

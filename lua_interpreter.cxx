@@ -1,5 +1,3 @@
-#include <stdexcept>
-
 #include "lua.hpp"
 
 #include "lua_interpreter.hxx"
@@ -40,7 +38,7 @@ struct lua_interpreter::impl {
     impl() {
         auto state = luaL_newstate();
         if (state == NULL)
-            throw std::runtime_error{"cannot create lua state: out of memory"};
+            throw luastate_error{"cannot create lua state: out of memory"};
         L = state;
     }
 
@@ -71,7 +69,7 @@ struct lua_interpreter::impl {
         get_by_key<VarWhere>(key, tidx);
         if (!checkfunc(L, -1)) {
             lua_pop(L, 1);
-            throw std::runtime_error{std::string{"variable/field ["} + key + "] is not " + throwmsg};
+            throw luastate_error{std::string{"variable/field ["} + key + "] is not " + throwmsg};
         }
         auto result = cvrtfunc(L, -1, NULL);
         lua_pop(L, 1);
@@ -119,7 +117,7 @@ struct lua_interpreter::impl {
         get_by_key<VarWhere>(key, tidx);
         if (!lua_istable(L, -1)) {
             lua_pop(L, 1);
-            throw std::runtime_error{std::string{"variable "} + key + " is not table"};
+            throw luastate_error{std::string{"variable/field ["} + key + "] is not table"};
         }
     }
 
@@ -142,7 +140,7 @@ struct lua_interpreter::impl {
 
     void protect_indexing(int idx) {
         if (!(get_top_idx() >= idx))
-            throw std::runtime_error{"Malformed Lua stack indexing"};
+            throw luastate_error{"Malformed Lua stack indexing"};
     }
 
     ~impl() {

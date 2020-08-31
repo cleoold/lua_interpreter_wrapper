@@ -1,10 +1,15 @@
 #pragma once
 
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <tuple>
 
 namespace luai {
+
+class luastate_error : public std::runtime_error {
+    using std::runtime_error::runtime_error;
+};
 
 enum class types {
     INT, NUM, STR, BOOL, TABLE
