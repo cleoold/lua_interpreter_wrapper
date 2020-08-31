@@ -45,7 +45,7 @@ auto x = state.get_global<types::INT>("x"); // 55
 
 `std::runtime_error` will be thrown if `x` does not exist (is `nil`) or is other types.
 
-For tables, use a block scope to contain it so the proxy object resets the Lua stack as appropriate when it is destroyed:
+For tables, getting a `types::TABLE` returns a `table_handle`. When this object is constructed, the corresponding table is pushed to the Lua stack so we can use `get_field` to obtain its fields. When this object is destructed, it removes that table from the lua Stack. Use a block scope to contain the returned object so it resets the Lua stack as appropriate when it is destroyed:
 
 ```cpp
 state.run_chunk("config = {\n"
@@ -56,8 +56,9 @@ state.run_chunk("config = {\n"
                 "}\n"
 );
 {
-    // one and one table handle should be defined per scope
+    // define new table handles only in the scope
     auto tbl = state.get_global<types::TABLE>("config"); // handle
+    // config pushed to Lua stack
     auto active = tbl.get_field<types::BOOL>("active"); // true
     auto volume = tbl.get_field<types::NUM>("volume"); // 77.7
     auto profile = tbl.get_field<types::STR>("profile"); // "normal"
@@ -66,14 +67,33 @@ state.run_chunk("config = {\n"
     // this is also an array, so one can use get_index()
     {
         auto menu = tbl.get_field<types::TABLE>("menu");
+        // menu pushed to Lua stack
         auto myvec = std::vector<std::string>();
         auto menu_len = menu.len();
         for (auto i = 1LL; i <= menu_len; ++i)
             myvec.emplace_back(menu.get_index<types::STR>(i));
     }
+    // menu popped from Lua stack
+}
+// config popped from Lua stack
+```
+
+So do not try to move the `table_handle` to containers, threads, etc that live longer than its current scope - it breaks RAII. `demo_test` can be referred to for detailed usage.
+
+By taking the advantage of object destruction order, `table_handle`s need not be nested:
+
+```cpp
+{
+    auto config = state.get_global<types::TABLE>("config");
+    auto menu = config.get_field<types::TABLE>("menu");
+    std::cout << "now playing - " << menu.get_index<types::STR>(1)
+              << " 🔊" << config.get_field<types::NUM>("volume")
+              << std::endl;
 }
 ```
 
+However, that beginning scope block is still needed. This prints `now playing - roar  🔊77.7` on a new line.
+
 ## End note
 
-These functions are not thread-safe, though.
+These functions are not thread-safe, though. Use a mutex lock to ensure sync.

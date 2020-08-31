@@ -94,7 +94,7 @@ int main() {
     );
     {
         // test table handle RAII for manipulating stack indices
-        // one and one table handle should be defined per scope
+        // define new table handles only in the scope
         auto k = state.get_global<types::TABLE>("k");
         ASSERT(k.get_field<types::INT>("haha") == 8);
         {
@@ -103,14 +103,34 @@ int main() {
                 auto kk = hehe.get_field<types::TABLE>("kk");
                 ASSERT(kk.get_field<types::INT>("cc") == 10);
                 ASSERT(k.get_field<types::INT>("haha") == 8);
+                // don't try to assign values to k:
+                // k = state.get_global<types::TABLE>("t");
+                // do not move table handles to containers, threads, etc that
+                // lives longer than current scope:
+                // std::thread([kk = std::move(kk)] {...}).detach();
+                // they break RAII, so behaviour is undefined
                 ASSERT(hehe.get_field<types::INT>("wow") == 9);
                 SHOULD_THROW(kk.get_field<types::NUM>("spam"));
             }
             ASSERT(hehe.get_field<types::INT>("wow") == 9);
         }
-        // don't try to get another table in this scope -- it is undefined
         ASSERT(k.get_field<types::NUM>("spam") == 8.8);
     }
+    // a scope contains tables with common ancestor ("k")
+    {
+        auto k = state.get_global<types::TABLE>("k");
+        auto hehe = k.get_field<types::TABLE>("hehe");
+        auto kk = hehe.get_field<types::TABLE>("kk");
+        ASSERT(k.get_field<types::INT>("haha") == 8);
+        ASSERT(kk.get_field<types::INT>("cc") == 10);
+        ASSERT(k.get_field<types::INT>("haha") == 8);
+        ASSERT(hehe.get_field<types::INT>("wow") == 9);
+        SHOULD_THROW(kk.get_field<types::NUM>("spam"));
+        ASSERT(hehe.get_field<types::INT>("wow") == 9);
+        ASSERT(k.get_field<types::NUM>("spam") == 8.8);
+    }
+
+    // short hand
     ASSERT(state.get_global<types::TABLE>("k")
             .get_field<types::TABLE>("hehe")
             .get_field<types::TABLE>("kk")
