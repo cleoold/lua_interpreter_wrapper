@@ -29,8 +29,8 @@ public:
     lua_interpreter();
 
     // MOVE
-    lua_interpreter(lua_interpreter &&) noexcept = default;
-    lua_interpreter &operator=(lua_interpreter &&) noexcept = default;
+    lua_interpreter(lua_interpreter &&) noexcept;
+    lua_interpreter &operator=(lua_interpreter &&) noexcept;
 
     // COPYING DELETED
 
@@ -69,8 +69,8 @@ public:
     long long len();
 
     // MOVE
-    table_handle(table_handle &&) noexcept = default;
-    table_handle &operator=(table_handle &&) noexcept = default;
+    table_handle(table_handle &&) noexcept;
+    table_handle &operator=(table_handle &&) noexcept;
 
     // COPYING DELETED
 
@@ -78,8 +78,9 @@ public:
     ~table_handle();
 
 private:
-    table_handle(std::shared_ptr<lua_interpreter::impl>);
-    std::shared_ptr<lua_interpreter::impl> wpimpl;
+    struct impl;
+    std::shared_ptr<impl> pimpl;
+    table_handle(std::shared_ptr<lua_interpreter::impl>, std::shared_ptr<impl>);
 
     friend class lua_interpreter;
 };

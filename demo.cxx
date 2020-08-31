@@ -44,7 +44,7 @@ int main() {
             auto nest = tbl.get_field<types::TABLE>("nest");
             std::cout << "t.nest.ehh = " << nest.get_field<types::INT>("ehh") << std::endl;
             std::cout << "x = " << state.get_global<types::INT>("x") << std::endl;
-            // TODO: make tbl.get_field() is this scope possible
+            std::cout << "t.wow = " << tbl.get_field<types::INT>("wow") << std::endl;
         }
         std::cout << "t.wow = " << tbl.get_field<types::INT>("wow") << std::endl;
     }
