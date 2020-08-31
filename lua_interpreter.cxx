@@ -1,3 +1,5 @@
+#include <stdexcept>
+
 #include "lua.hpp"
 
 #include "lua_interpreter.hxx"
@@ -242,8 +244,6 @@ table_handle::table_handle(std::shared_ptr<lua_interpreter::impl> interp_impl, s
 
 table_handle::table_handle(table_handle &&) noexcept = default;
 table_handle &table_handle::operator=(table_handle &&) noexcept = default;
-
-table_handle::~table_handle() = default;
 
 template<types Type>
 get_var_t<Type> table_handle::get_field(whahaha_key_t<whahaha::TABLE> varname) {

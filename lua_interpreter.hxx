@@ -1,7 +1,8 @@
 #pragma once
 
-#include <tuple>
 #include <memory>
+#include <string>
+#include <tuple>
 
 namespace luai {
 
@@ -75,7 +76,7 @@ public:
     // COPYING DELETED
 
     // must be called immediately after using table_handle
-    ~table_handle();
+    //~table_handle();
 
 private:
     struct impl;
