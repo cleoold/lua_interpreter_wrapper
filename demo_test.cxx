@@ -58,10 +58,16 @@ int main() {
     SHOULD_THROW(state.get_global<types::INT>("xx"));
     // int <-> string, num <-> string are convertible, but int <-> num is not
     SHOULD_THROW(state.get_global<types::INT>("y"));
+    ASSERT(state.get_global<types::LTYPE>("x") == types::INT);
+    ASSERT(state.get_global<types::LTYPE>("y") == types::NUM);
+    ASSERT(state.get_global<types::LTYPE>("s") == types::STR);
+    ASSERT(state.get_global<types::LTYPE>("b") == types::BOOL);
+    ASSERT(state.get_global<types::LTYPE>("xx") == types::NIL);
 
     state.run_chunk(
         "a = { 1, 6.6, 'haha', false, {} }\n"
     );
+    ASSERT(state.get_global<types::LTYPE>("a") == types::TABLE);
     // must open up new scope for tables
     {
         auto a = state.get_global<types::TABLE>("a");
@@ -71,6 +77,7 @@ int main() {
         ASSERT(a.get_index<types::BOOL>(4) == false);
         a.get_index<types::TABLE>(5);
         ASSERT(a.len() == 5);
+        ASSERT(a.get_index<types::LTYPE>(1) == types::INT);
     }
 
     state.run_chunk(
@@ -79,11 +86,13 @@ int main() {
     {
         auto t = state.get_global<types::TABLE>("t");
         ASSERT(t.get_field<types::INT>("wow") == 7);
+        ASSERT(t.get_field<types::LTYPE>("nest") == types::TABLE);
         {
             auto nest = t.get_field<types::TABLE>("nest");
             ASSERT(nest.get_field<types::INT>("ehh") == 8);
             ASSERT(state.get_global<types::INT>("x") == 15);
             ASSERT(t.get_field<types::INT>("wow") == 7);
+            ASSERT(nest.get_field<types::LTYPE>("ehh") == types::INT);
         }
         ASSERT(t.get_field<types::INT>("wow") == 7);
     }

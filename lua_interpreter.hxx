@@ -12,19 +12,23 @@ class luastate_error : public std::runtime_error {
 };
 
 enum class types {
-    INT, NUM, STR, BOOL, TABLE
+    INT, NUM, STR, BOOL, TABLE,
+    NIL, OTHER, LTYPE
 };
 
 class table_handle;
 
+// all possible types one can get from state.get_global(),  get_field() and get_index()
 template<types Type>
 using get_var_t =
     std::conditional_t<Type == types::INT, long long,
     std::conditional_t<Type == types::NUM, double,
     std::conditional_t<Type == types::STR, std::string,
     std::conditional_t<Type == types::BOOL, bool,
-                    /*types::TABLE*/ table_handle
->>>>;
+    std::conditional_t<Type == types::TABLE, table_handle,
+    std::conditional_t<Type == types::LTYPE, types,
+    /*unsupported types*/ luastate_error
+>>>>>>;
 
 class lua_interpreter {
 public:

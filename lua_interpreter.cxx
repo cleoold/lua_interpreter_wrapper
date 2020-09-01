@@ -111,6 +111,32 @@ struct lua_interpreter::impl {
             "boolean");
     }
 
+    // like get_what_impl(), but returns a type enum
+    // pop 0, push 0
+    template<whahaha VarWhere, class KeyT = whahaha_key_t<VarWhere>>
+    auto get_type_impl(KeyT key, int tidx) {
+        get_by_key<VarWhere>(key, tidx);
+        auto typeint = lua_type(L, -1);
+        auto res = 
+            typeint == LUA_TNUMBER ? types::NUM :
+            typeint == LUA_TSTRING ? types::STR :
+            typeint == LUA_TBOOLEAN ? types::BOOL :
+            typeint == LUA_TTABLE ? types::TABLE :
+            typeint == LUA_TNIL ? types::NIL :
+            types::OTHER;
+        if (res == types::NUM && lua_isinteger(L, -1))
+            res = types::INT;
+        lua_pop(L, 1);
+        return res;
+    }
+
+    // PARTIAL SPECIALIZATIONS
+    // calls get_type_impl(), pop 0, push 0
+    template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
+    std::enable_if_t<Type == types::LTYPE, R> get_what(KeyT key, int tidx) {
+        return get_type_impl<VarWhere>(key, tidx);
+    }
+
     // pop 0, push 1
     template<whahaha VarWhere, class KeyT = whahaha_key_t<VarWhere>>
     void push_table(KeyT key, int tidx) {
@@ -203,6 +229,7 @@ template get_var_t<types::INT> lua_interpreter::get_global<types::INT>(whahaha_k
 template get_var_t<types::NUM> lua_interpreter::get_global<types::NUM>(whahaha_key_t<whahaha::GLOBAL>);
 template get_var_t<types::STR> lua_interpreter::get_global<types::STR>(whahaha_key_t<whahaha::GLOBAL>);
 template get_var_t<types::BOOL> lua_interpreter::get_global<types::BOOL>(whahaha_key_t<whahaha::GLOBAL>);
+template get_var_t<types::LTYPE> lua_interpreter::get_global<types::LTYPE>(whahaha_key_t<whahaha::GLOBAL>);
 
 template<>
 table_handle lua_interpreter::get_global<types::TABLE>(whahaha_key_t<whahaha::GLOBAL> varname) {
@@ -253,6 +280,7 @@ template get_var_t<types::INT> table_handle::get_field<types::INT>(whahaha_key_t
 template get_var_t<types::NUM> table_handle::get_field<types::NUM>(whahaha_key_t<whahaha::TABLE>);
 template get_var_t<types::STR> table_handle::get_field<types::STR>(whahaha_key_t<whahaha::TABLE>);
 template get_var_t<types::BOOL> table_handle::get_field<types::BOOL>(whahaha_key_t<whahaha::TABLE>);
+template get_var_t<types::LTYPE> table_handle::get_field<types::LTYPE>(whahaha_key_t<whahaha::TABLE>);
 
 template<>
 table_handle table_handle::get_field<types::TABLE>(whahaha_key_t<whahaha::TABLE> varname) {
@@ -270,6 +298,7 @@ template get_var_t<types::INT> table_handle::get_index<types::INT>(whahaha_key_t
 template get_var_t<types::NUM> table_handle::get_index<types::NUM>(whahaha_key_t<whahaha::TABLE_INDEX>);
 template get_var_t<types::STR> table_handle::get_index<types::STR>(whahaha_key_t<whahaha::TABLE_INDEX>);
 template get_var_t<types::BOOL> table_handle::get_index<types::BOOL>(whahaha_key_t<whahaha::TABLE_INDEX>);
+template get_var_t<types::LTYPE> table_handle::get_index<types::LTYPE>(whahaha_key_t<whahaha::TABLE_INDEX>);
 
 template<>
 table_handle table_handle::get_index<types::TABLE>(whahaha_key_t<whahaha::TABLE_INDEX> idx) {

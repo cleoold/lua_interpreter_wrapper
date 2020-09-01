@@ -22,10 +22,13 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/bin)
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/build/lib)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 
-# exec
+# lib
 
 add_library(lua_interpreter STATIC lua_interpreter.cxx)
+set_target_properties(lua_interpreter PROPERTIES PUBLIC_HEADER lua_interpreter.hxx)
 target_link_libraries(lua_interpreter ${LUA_LIBRARIES})
+
+# demo exec
 
 add_executable(demo_repl demo_repl.cxx)
 target_link_libraries(demo_repl lua_interpreter)

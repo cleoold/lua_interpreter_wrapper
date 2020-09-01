@@ -16,6 +16,8 @@ It will generate a library archive under `build/lib` folder. It also generates t
 
 ## Example
 
+### Globals
+
 open up a Lua state, execute some code:
 
 ```cpp
@@ -23,7 +25,7 @@ using namespace luai;
 
 auto state = lua_interpreter();
 state.openlibs(); // load all standard libraries
-state.run_chunk("x = 55 y = 66 print(x + y)");
+state.run_chunk("x = 55 y = 66 f = 6.6 s = 'hehe' print(x + y)");
 ```
 
 Outputs `121` on a new line.
@@ -37,15 +39,27 @@ cout << std::get<1>(r) << endl;
 
 Outputs `attempt to perform arithmetic on a nil value (global 'z')` on my machine.
 
-One can grab global variables of type integer, number, string, bool and table. For example, to grab the value of `x`
+One can grab global variables of type integer, number, string, bool and table (they are defined as `enum class types;` in `lua_interpreter.hxx`). For example:
 
 ```cpp
 auto x = state.get_global<types::INT>("x"); // 55
+auto f = state.get_global<types::NUM>("f"); // 6.6
+auto s = state.get_global<types::STR>("s"); // "hehe"
 ```
 
-`luastate_error` will be thrown if `x` does not exist (is `nil`) or is other types.
+`luastate_error` will be thrown if variable does not exist (is `nil`) or is other types.
 
-For tables, getting a `types::TABLE` returns a `table_handle`. When this object is constructed, the corresponding table is pushed to the Lua stack so we can use `get_field` to obtain its fields. When this object is destructed, it removes that table from the lua Stack. Use a block scope to contain the returned object so it resets the Lua stack as appropriate when it is destroyed:
+The types are introspectible by passing special template parameter `types::LTYPE` to `get_global` method:
+
+```cpp
+auto xtype = state.get_global<types::LTYPE>("x"); // types::INT
+auto ftype = state.get_global<types::LTYPE>("f"); // types::NUM (floats)
+auto ztype = state.get_global<types::LTYPE>("z"); // types::NIL (variable does not exist)
+```
+
+### Tables
+
+For tables, getting a `types::TABLE` returns a `table_handle`. When this object is constructed, the corresponding table is pushed to the Lua stack so we can use `get_field` to obtain its fields (whose signature is the same as previous `get_global`). When this object is destructed, it removes that table from the lua Stack. Use a block scope to contain the returned object so it resets the Lua stack as appropriate when it is destroyed:
 
 ```cpp
 state.run_chunk("config = {\n"
