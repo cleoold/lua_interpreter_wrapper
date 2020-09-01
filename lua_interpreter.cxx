@@ -183,7 +183,7 @@ void lua_interpreter::impl::get_by_key<whahaha::GLOBAL>(whahaha_key_t<whahaha::G
 
 // assumes table is already on the stack at index tidx
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::TABLE>(whahaha_key_t<whahaha::GLOBAL> keyname, int tidx) {
+void lua_interpreter::impl::get_by_key<whahaha::TABLE>(whahaha_key_t<whahaha::TABLE> keyname, int tidx) {
     protect_indexing(tidx);
     lua_getfield(L, tidx, keyname);
 }
