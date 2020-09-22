@@ -104,7 +104,7 @@ struct lua_interpreter::impl {
     // calls get_what_impl(), pop 0, push 0
     template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
     std::enable_if_t<Type == types::BOOL, R> get_what(KeyT key, int tidx) {
-        static auto toboolean = [](auto ls, auto idx, auto) { return (R)lua_toboolean(ls, idx); };
+        static auto toboolean = [](auto ls, auto idx, auto) { return static_cast<R>(lua_toboolean(ls, idx)); };
         // because lua_isboolean is macro
         static auto isboolean = [](auto ls, auto idx) { return lua_isboolean(ls, idx); };
         return get_what_impl<VarWhere, R>(key, tidx, toboolean, isboolean,
