@@ -4,19 +4,23 @@
 
 using namespace luai;
 
-// tags
-enum class whahaha {
+// tags to identify where a field/variable comes from
+// GLOBAL => variable is global
+// TABLE => field is from a table indexed by string
+// TABLE_INDEX => field is from a table/array indexed by int
+// FUNC... => stuff comes from a function
+enum class var_where {
     GLOBAL, TABLE, TABLE_INDEX, FUNC1
 };
 
 using LuaInt = long long;
 
 // varwhere -> key type
-template<whahaha VarWhere>
-using whahaha_key_t =
-    std::conditional_t<VarWhere == whahaha::GLOBAL, const char *,
-    std::conditional_t<VarWhere == whahaha::TABLE, const char *,
-    std::conditional_t<VarWhere == whahaha::TABLE_INDEX, LuaInt,
+template<var_where VarWhere>
+using keytype_t =
+    std::conditional_t<VarWhere == var_where::GLOBAL, const char *,
+    std::conditional_t<VarWhere == var_where::TABLE, const char *,
+    std::conditional_t<VarWhere == var_where::TABLE_INDEX, LuaInt,
                                 /*FUNC1*/ void (*)(lua_State *, int)
 >>>;
 
@@ -24,10 +28,10 @@ namespace {
     constexpr int IGNORED {};
 
     // used to build ugly error message
-    auto operator+(const std::string &lhs, whahaha_key_t<whahaha::TABLE_INDEX> num) {
+    auto operator+(const std::string &lhs, keytype_t<var_where::TABLE_INDEX> num) {
         return lhs + std::to_string(num);
     }
-    auto operator+(const std::string &lhs, whahaha_key_t<whahaha::FUNC1>) {
+    auto operator+(const std::string &lhs, keytype_t<var_where::FUNC1>) {
         return lhs + "function()";
     }
 }
@@ -58,13 +62,13 @@ struct lua_interpreter::impl {
     }
 
     // pop 0, push 1
-    template<whahaha VarWhere>
-    void get_by_key(whahaha_key_t<VarWhere> key, int tidx);
+    template<var_where VarWhere>
+    void get_by_key(keytype_t<VarWhere> key, int tidx);
 
     // grab value found by "key" based on the table at index "tidx"
     // if VarWhere is GLOBAL then tidx should be ignored
     // pop 0, push 0
-    template<whahaha VarWhere, class R, class Cvrt, class Check, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, class R, class Cvrt, class Check, class KeyT = keytype_t<VarWhere>>
     R get_what_impl(KeyT key, int tidx, Cvrt &&cvrtfunc, Check &&checkfunc, const char *throwmsg) {
         get_by_key<VarWhere>(key, tidx);
         if (!checkfunc(L, -1)) {
@@ -78,7 +82,7 @@ struct lua_interpreter::impl {
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
-    template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, types Type, class R = get_var_t<Type>, class KeyT = keytype_t<VarWhere>>
     std::enable_if_t<Type == types::INT, R> get_what(KeyT key, int tidx) {
         return get_what_impl<VarWhere, R>(key, tidx, lua_tointegerx, lua_isinteger,
             "integer");
@@ -86,7 +90,7 @@ struct lua_interpreter::impl {
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
-    template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, types Type, class R = get_var_t<Type>, class KeyT = keytype_t<VarWhere>>
     std::enable_if_t<Type == types::NUM, R> get_what(KeyT key, int tidx) {
         return get_what_impl<VarWhere, R>(key, tidx, lua_tonumberx, lua_isnumber,
             "number or string convertible to number");
@@ -94,7 +98,7 @@ struct lua_interpreter::impl {
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
-    template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, types Type, class R = get_var_t<Type>, class KeyT = keytype_t<VarWhere>>
     std::enable_if_t<Type == types::STR, R> get_what(KeyT key, int tidx) {
         return get_what_impl<VarWhere, R>(key, tidx, lua_tolstring, lua_isstring,
             "string or number");
@@ -102,7 +106,7 @@ struct lua_interpreter::impl {
 
     // PARTIAL SPECIALIZATIONS
     // calls get_what_impl(), pop 0, push 0
-    template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, types Type, class R = get_var_t<Type>, class KeyT = keytype_t<VarWhere>>
     std::enable_if_t<Type == types::BOOL, R> get_what(KeyT key, int tidx) {
         static auto toboolean = [](auto ls, auto idx, auto) { return static_cast<R>(lua_toboolean(ls, idx)); };
         // because lua_isboolean is macro
@@ -113,7 +117,7 @@ struct lua_interpreter::impl {
 
     // like get_what_impl(), but returns a type enum
     // pop 0, push 0
-    template<whahaha VarWhere, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, class KeyT = keytype_t<VarWhere>>
     auto get_type_impl(KeyT key, int tidx) {
         get_by_key<VarWhere>(key, tidx);
         auto typeint = lua_type(L, -1);
@@ -132,13 +136,13 @@ struct lua_interpreter::impl {
 
     // PARTIAL SPECIALIZATIONS
     // calls get_type_impl(), pop 0, push 0
-    template<whahaha VarWhere, types Type, class R = get_var_t<Type>, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, types Type, class R = get_var_t<Type>, class KeyT = keytype_t<VarWhere>>
     std::enable_if_t<Type == types::LTYPE, R> get_what(KeyT key, int tidx) {
         return get_type_impl<VarWhere>(key, tidx);
     }
 
     // pop 0, push 1
-    template<whahaha VarWhere, class KeyT = whahaha_key_t<VarWhere>>
+    template<var_where VarWhere, class KeyT = keytype_t<VarWhere>>
     void push_table(KeyT key, int tidx) {
         get_by_key<VarWhere>(key, tidx);
         if (!lua_istable(L, -1)) {
@@ -160,7 +164,7 @@ struct lua_interpreter::impl {
     // assumes table is already in the stack at index tidx
     // pop 0, push 0
     auto table_len(int tidx) {
-        return get_what_impl<whahaha::FUNC1, LuaInt>(lua_len, tidx, lua_tointegerx, lua_isinteger,
+        return get_what_impl<var_where::FUNC1, LuaInt>(lua_len, tidx, lua_tointegerx, lua_isinteger,
             "integer");
     }
 
@@ -177,20 +181,20 @@ struct lua_interpreter::impl {
 
 // int param is ignored
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::GLOBAL>(whahaha_key_t<whahaha::GLOBAL> keyname, int) {
+void lua_interpreter::impl::get_by_key<var_where::GLOBAL>(keytype_t<var_where::GLOBAL> keyname, int) {
     lua_getglobal(L, keyname);
 }
 
 // assumes table is already on the stack at index tidx
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::TABLE>(whahaha_key_t<whahaha::TABLE> keyname, int tidx) {
+void lua_interpreter::impl::get_by_key<var_where::TABLE>(keytype_t<var_where::TABLE> keyname, int tidx) {
     protect_indexing(tidx);
     lua_getfield(L, tidx, keyname);
 }
 
 // assumes table is already on the stack at index tidx
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::TABLE_INDEX>(whahaha_key_t<whahaha::TABLE_INDEX> keyidx, int tidx) {
+void lua_interpreter::impl::get_by_key<var_where::TABLE_INDEX>(keytype_t<var_where::TABLE_INDEX> keyidx, int tidx) {
     protect_indexing(tidx);
     lua_geti(L, tidx, keyidx);
 }
@@ -198,7 +202,7 @@ void lua_interpreter::impl::get_by_key<whahaha::TABLE_INDEX>(whahaha_key_t<whaha
 // key is a function
 // calls function
 template<>
-void lua_interpreter::impl::get_by_key<whahaha::FUNC1>(whahaha_key_t<whahaha::FUNC1> f, int tidx) {
+void lua_interpreter::impl::get_by_key<var_where::FUNC1>(keytype_t<var_where::FUNC1> f, int tidx) {
     protect_indexing(tidx);
     f(L, tidx);
 }
@@ -221,19 +225,19 @@ std::tuple<bool, std::string> lua_interpreter::run_chunk(const char *code) noexc
 }
 
 template<types Type>
-get_var_t<Type> lua_interpreter::get_global(whahaha_key_t<whahaha::GLOBAL> varname) {
-    return pimpl->get_what<whahaha::GLOBAL, Type>(varname, IGNORED);
+get_var_t<Type> lua_interpreter::get_global(keytype_t<var_where::GLOBAL> varname) {
+    return pimpl->get_what<var_where::GLOBAL, Type>(varname, IGNORED);
 }
 // EXPLICIT INSTANTIATION for basic types
-template get_var_t<types::INT> lua_interpreter::get_global<types::INT>(whahaha_key_t<whahaha::GLOBAL>);
-template get_var_t<types::NUM> lua_interpreter::get_global<types::NUM>(whahaha_key_t<whahaha::GLOBAL>);
-template get_var_t<types::STR> lua_interpreter::get_global<types::STR>(whahaha_key_t<whahaha::GLOBAL>);
-template get_var_t<types::BOOL> lua_interpreter::get_global<types::BOOL>(whahaha_key_t<whahaha::GLOBAL>);
-template get_var_t<types::LTYPE> lua_interpreter::get_global<types::LTYPE>(whahaha_key_t<whahaha::GLOBAL>);
+template get_var_t<types::INT> lua_interpreter::get_global<types::INT>(keytype_t<var_where::GLOBAL>);
+template get_var_t<types::NUM> lua_interpreter::get_global<types::NUM>(keytype_t<var_where::GLOBAL>);
+template get_var_t<types::STR> lua_interpreter::get_global<types::STR>(keytype_t<var_where::GLOBAL>);
+template get_var_t<types::BOOL> lua_interpreter::get_global<types::BOOL>(keytype_t<var_where::GLOBAL>);
+template get_var_t<types::LTYPE> lua_interpreter::get_global<types::LTYPE>(keytype_t<var_where::GLOBAL>);
 
 template<>
-table_handle lua_interpreter::get_global<types::TABLE>(whahaha_key_t<whahaha::GLOBAL> varname) {
-    pimpl->push_table<whahaha::GLOBAL>(varname, IGNORED);
+table_handle lua_interpreter::get_global<types::TABLE>(keytype_t<var_where::GLOBAL> varname) {
+    pimpl->push_table<var_where::GLOBAL>(varname, IGNORED);
     return {pimpl, nullptr};
 }
 
@@ -271,38 +275,38 @@ table_handle::table_handle(table_handle &&) noexcept = default;
 table_handle &table_handle::operator=(table_handle &&) noexcept = default;
 
 template<types Type>
-get_var_t<Type> table_handle::get_field(whahaha_key_t<whahaha::TABLE> varname) {
-    return pimpl->pstate->get_what<whahaha::TABLE, Type>(varname, pimpl->stack_index);
+get_var_t<Type> table_handle::get_field(keytype_t<var_where::TABLE> varname) {
+    return pimpl->pstate->get_what<var_where::TABLE, Type>(varname, pimpl->stack_index);
 }
 
 // EXPLICIT INSTANTIATION for basic types
-template get_var_t<types::INT> table_handle::get_field<types::INT>(whahaha_key_t<whahaha::TABLE>);
-template get_var_t<types::NUM> table_handle::get_field<types::NUM>(whahaha_key_t<whahaha::TABLE>);
-template get_var_t<types::STR> table_handle::get_field<types::STR>(whahaha_key_t<whahaha::TABLE>);
-template get_var_t<types::BOOL> table_handle::get_field<types::BOOL>(whahaha_key_t<whahaha::TABLE>);
-template get_var_t<types::LTYPE> table_handle::get_field<types::LTYPE>(whahaha_key_t<whahaha::TABLE>);
+template get_var_t<types::INT> table_handle::get_field<types::INT>(keytype_t<var_where::TABLE>);
+template get_var_t<types::NUM> table_handle::get_field<types::NUM>(keytype_t<var_where::TABLE>);
+template get_var_t<types::STR> table_handle::get_field<types::STR>(keytype_t<var_where::TABLE>);
+template get_var_t<types::BOOL> table_handle::get_field<types::BOOL>(keytype_t<var_where::TABLE>);
+template get_var_t<types::LTYPE> table_handle::get_field<types::LTYPE>(keytype_t<var_where::TABLE>);
 
 template<>
-table_handle table_handle::get_field<types::TABLE>(whahaha_key_t<whahaha::TABLE> varname) {
-    pimpl->pstate->push_table<whahaha::TABLE>(varname, pimpl->stack_index);
+table_handle table_handle::get_field<types::TABLE>(keytype_t<var_where::TABLE> varname) {
+    pimpl->pstate->push_table<var_where::TABLE>(varname, pimpl->stack_index);
     return {pimpl->pstate, pimpl};
 }
 
 template<types Type>
-get_var_t<Type> table_handle::get_index(whahaha_key_t<whahaha::TABLE_INDEX> idx) {
-    return pimpl->pstate->get_what<whahaha::TABLE_INDEX, Type>(idx, pimpl->stack_index);
+get_var_t<Type> table_handle::get_index(keytype_t<var_where::TABLE_INDEX> idx) {
+    return pimpl->pstate->get_what<var_where::TABLE_INDEX, Type>(idx, pimpl->stack_index);
 }
 
 // EXPLICIT INSTANTIATION for basic types
-template get_var_t<types::INT> table_handle::get_index<types::INT>(whahaha_key_t<whahaha::TABLE_INDEX>);
-template get_var_t<types::NUM> table_handle::get_index<types::NUM>(whahaha_key_t<whahaha::TABLE_INDEX>);
-template get_var_t<types::STR> table_handle::get_index<types::STR>(whahaha_key_t<whahaha::TABLE_INDEX>);
-template get_var_t<types::BOOL> table_handle::get_index<types::BOOL>(whahaha_key_t<whahaha::TABLE_INDEX>);
-template get_var_t<types::LTYPE> table_handle::get_index<types::LTYPE>(whahaha_key_t<whahaha::TABLE_INDEX>);
+template get_var_t<types::INT> table_handle::get_index<types::INT>(keytype_t<var_where::TABLE_INDEX>);
+template get_var_t<types::NUM> table_handle::get_index<types::NUM>(keytype_t<var_where::TABLE_INDEX>);
+template get_var_t<types::STR> table_handle::get_index<types::STR>(keytype_t<var_where::TABLE_INDEX>);
+template get_var_t<types::BOOL> table_handle::get_index<types::BOOL>(keytype_t<var_where::TABLE_INDEX>);
+template get_var_t<types::LTYPE> table_handle::get_index<types::LTYPE>(keytype_t<var_where::TABLE_INDEX>);
 
 template<>
-table_handle table_handle::get_index<types::TABLE>(whahaha_key_t<whahaha::TABLE_INDEX> idx) {
-    pimpl->pstate->push_table<whahaha::TABLE_INDEX>(idx, pimpl->stack_index);
+table_handle table_handle::get_index<types::TABLE>(keytype_t<var_where::TABLE_INDEX> idx) {
+    pimpl->pstate->push_table<var_where::TABLE_INDEX>(idx, pimpl->stack_index);
     return {pimpl->pstate, pimpl};
 }
 
