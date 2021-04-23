@@ -46,6 +46,9 @@ struct lua_interpreter::impl {
         L = state;
     }
 
+    impl(impl &&) = delete;
+    impl &operator=(impl &&) = delete;
+
     void openlibs() noexcept {
         luaL_openlibs(L);
     }
@@ -257,6 +260,9 @@ struct table_handle::impl {
         : pstate{std::move(interp_impl)}, parent{std::move(parent_impl)}
         , stack_index{pstate->get_top_idx()}
     {}
+
+    impl(impl &&) = delete;
+    impl &operator=(impl &&) = delete;
 
     ~impl() {
         // technically 2nd condition is false only if user uses function incorrectly we
